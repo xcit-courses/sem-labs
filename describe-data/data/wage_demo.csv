@@ -1,0 +1,11 @@
+name,sex,year,age,maritl,children_count,race,education,region,jobclass,health,health_ins,has_health_ins,logwage,wage,happiness_level,happiness_rating
+John,M,2006,18,1. Never Married,4,1. White,1. < HS Grad,2. Middle Atlantic,1. Industrial,1. <=Good,2. No,FALSE,4.31806333496276,75.04315401735154,1,None
+William,M,2004,24,1. Never Married,3,1. White,4. College Grad,2. Middle Atlantic,2. Information,2. >=Very Good,2. No,FALSE,4.25527250510331,70.47601964694451,5,Fairly much
+James,M,2003,45,2. Married,0,1. White,3. Some College,2. Middle Atlantic,1. Industrial,1. <=Good,1. Yes,TRUE,4.8750612633917,130.98217737746066,1,None
+Charles,M,2003,43,2. Married,1,3. Asian,4. College Grad,2. Middle Atlantic,2. Information,2. >=Very Good,1. Yes,TRUE,5.04139268515823,154.68529299563002,1,None
+George,M,2005,50,4. Divorced,1,1. White,2. HS Grad,2. Middle Atlantic,2. Information,1. <=Good,1. Yes,TRUE,4.31806333496276,75.04315401735154,2,A small degree
+Frank,M,2008,54,2. Married,2,1. White,4. College Grad,2. Middle Atlantic,2. Information,2. >=Very Good,1. Yes,TRUE,4.84509804001426,127.11574381218446,4,To some extent
+Joseph,M,2009,44,2. Married,1,4. Other,3. Some College,2. Middle Atlantic,1. Industrial,2. >=Very Good,1. Yes,TRUE,5.13302127864665,169.5285380366795,2,A small degree
+Thomas,M,2008,30,1. Never Married,2,3. Asian,3. Some College,2. Middle Atlantic,2. Information,1. <=Good,1. Yes,TRUE,4.7160033436348,111.7208493609888,2,A small degree
+Henry,M,2006,41,1. Never Married,2,2. Black,3. Some College,2. Middle Atlantic,2. Information,2. >=Very Good,1. Yes,TRUE,4.77815125038364,118.88435933988579,1,None
+Robert,M,2004,52,2. Married,2,1. White,2. HS Grad,2. Middle Atlantic,2. Information,2. >=Very Good,1. Yes,TRUE,4.85733249643127,128.68048822062414,7,Completely

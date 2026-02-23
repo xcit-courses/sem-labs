@@ -1,0 +1,92 @@
+---
+title: "Compute basic stats"
+format: html
+---
+
+## Quarto
+
+Quarto enables you to weave together content and executable code into a finished document. To learn more about Quarto see <https://quarto.org>.
+
+## Running Code
+
+When you click the **Render** button a document will be generated that includes both content and the output of embedded code. You can embed code like this:
+
+```{r}
+1 + 1
+```
+
+You can add options to executable code like this 
+
+```{r}
+#| echo: false
+2 * 2
+```
+
+The `echo: false` option disables the printing of code (only output is displayed).
+
+
+
+## Example data
+
+```{r}
+grades <- c(12, 8, 10, 9, 11, 10)
+hours_of_sudy <- c(7, 3, 5, 5, 4, 6)
+```
+
+
+## Exercises:
+
+### Compute the mean of grades based on formula
+
+```{r}
+
+```
+
+
+### What is the median of grades?
+
+
+
+### What is the mode of grades?
+
+
+
+
+### Compute the variance of grades based on the formula
+
+```{r}
+
+```
+
+
+### Compute the standard deviation of grades based on the formula
+
+```{r}
+
+```
+
+
+
+
+### Compute the correlation between grades and hours of study based on the formula
+
+
+```{r}
+
+```
+
+
+
+
+## Using R's in-build function
+
+Using the functions available in R, recompute all of the above.
+
+```{r}
+
+```
+
+
+
+
+

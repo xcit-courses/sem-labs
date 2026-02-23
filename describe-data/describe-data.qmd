@@ -1,0 +1,50 @@
+---
+title: "Describe a dataset"
+format: html
+---
+
+
+
+## load the data 
+
+describe-data/data/attractive.csv
+```{r}
+library(tidyverse)
+
+attractive <- read_csv("data/attractive.csv")
+attractive
+
+```
+
+
+
+## Exercises
+
+### What's the size of that data?
+
+
+### What shape does that data table have?
+
+
+### Review each column: what type of variable is it?
+
+
+### What can you say about the values of each column?
+
+
+### How could you visualize the distribution of those values?
+
+
+### How could you quantify the relationships between two columns?
+
+
+### How could you visualize the relationship between two variables? 
+
+
+
+
+
+
+
+
+

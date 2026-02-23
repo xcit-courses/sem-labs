@@ -4,5 +4,8 @@ install.packages("tidyverse")
 install.packages("knitr")
 install.packages("psych")
 install.packages("reporter")
+install.packages("broom")
 install.packages("lavaan", dependencies = TRUE)
+install.packages("semPlot", dependencies = TRUE)
+install.packages("devtools")
 
