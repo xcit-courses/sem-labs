@@ -1,0 +1,16 @@
+_site/
+.DS_Store
+*.Rproj.user
+*.Rhistory
+.RData
+*.pyc
+__pycache__/
+.Rproj.user/
+.Rhistory
+.ipynb_checkpoints/
+
+/.quarto/
+/git_ignored_content/
+/admin/
+
+
