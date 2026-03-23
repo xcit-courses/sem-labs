@@ -1,0 +1,329 @@
+---
+title: "Simple linear regression"
+format: html
+---
+
+
+
+## About
+
+This notebook covers the basics of simple linear regression.
+
+
+
+```{r}
+# load packages
+library(tidyverse)
+```
+
+
+## Simulated data
+
+It is useful to start with simulated data as in this case we know the theoretical values (we set them ourselves) and we can test if the model fit is able to recover those parameters.
+
+
+```{r}
+n <- 100 # number of data points
+age <- runif(n, min = 18, max = 65)
+err <- rnorm(n, 0, 1000)
+
+salary_true <- 2500 + (age-18) * 120
+salary <- salary_true + err
+
+sim_data <- data.frame(age, salary_true, salary)
+
+```
+
+
+Plot the data:
+
+```{r}
+p1 <- ggplot(sim_data, aes(age, salary)) + 
+  geom_point() + 
+  coord_cartesian(xlim = c(0, 100))
+p1
+```
+(Intercept)  481.965; age          113.933 
+
+
+
+Does this look like a linear model would be adequate to describe the relationship between salary and age?
+
+> Enter your response here:
+____
+
+
+
+
+We can try to manually find good parameters to fit this dataset:
+
+```{r}
+# add fit to the data
+p1 + geom_abline(slope = 50, intercept = 1000, color = "darkorange", size = 1)
+
+```
+
+
+
+
+
+We can now fit a linear model to this dataset using `lm()`.
+
+
+```{r}
+m1 <- lm(formula = salary ~ age, data = sim_data)
+summary(m1)
+
+```
+
+
+Enter the best parameter in the code below to check if the fit looks good:
+
+```{r}
+# TODO: change the values below to match the best fit parameters
+p1 + geom_abline(slope = 50, intercept = 1000, color = "darkorange", size = 1)
+
+```
+
+
+
+
+
+
+Can you make sense of these outputs? Do you understand what they mean?
+
+> Enter your response here
+
+
+
+### Understanding the estimated coefficients
+
+Try to answer the following questions using the fitted model.
+
+
+**Q1: My uncle is 50 years old. How much is he expected to earn, given this model?**
+
+
+
+```{r}
+# TODO: write your calculation here
+
+```
+
+
+**Q2: My niece is 0 years old. How much does the model say she should be earning?**
+
+
+```{r}
+# TODO: write your calculation here
+
+```
+
+
+
+
+
+
+### Diagnostics
+
+Linear regression requires several assumptions to be met. You can get a look at diagnostic plots using the following command. Have a look and make sure you understand these plots.
+
+```{r}
+
+plot(m1)
+
+```
+
+
+
+
+
+### R squared
+
+R² is the proportion of explained variance. You can compute it as follows:
+
+
+
+The variance we want to explain (i.e., "total variance") is the variance of the variable we want to predict; in this example, it's `salary`.
+
+
+```{r}
+# total variance
+var(sim_data$salary)
+```
+
+Our model makes predictions about the values of salary; the variance of the residuals (the errors of the model) is the part of the total variance that our model cannot explain. 
+
+```{r}
+# unexplained variance
+var(m1$residuals)
+```
+
+The part that we can explain is therefore:
+
+```{r}
+# explained variance = total_variance - unexplained variance
+var(sim_data$salary) - var(m1$residuals)
+```
+
+
+Now interpreting the values of variances is not very intuitive. To make things easier for us, we will express the explained variance as a proportion of the total variance: the better our model, the more of the variance of the outcome variable we can explain, the higher the R² value.
+
+```{r}
+# R²
+(var(sim_data$salary) - var(m1$residuals)) / var(sim_data$salary)
+
+# or equally
+1 - var(m1$residuals) / var(sim_data$salary)
+```
+
+
+
+
+
+
+
+
+## Real dataset
+
+In the above example we used a real dataset. Now let's look at a real dataset from a published paper by Brett et al. (2025). The original dataset can be found [here](https://osf.io/jwhna/files/mbhz8).
+
+```{r}
+# loading the data from Brett et al. 
+# https://osf.io/jwhna/files/mbhz8
+
+alex <- read_csv("data/brett2025.csv")
+
+alex <- alex |> 
+  filter(session_index==1) |> 
+  rename(
+    person_id = agent_id,
+    alexithymia = PAQ_tot, 
+         distress = DASS_tot,
+         stress = DASS_stress,
+         anxiety = DASS_anxiety,
+         depression = DASS_depression,
+         negative_er = PERCI_Negative_ER, 
+         positive_er = PERCI_tot) |> 
+  select(person_id, age, sex, alexithymia, distress, stress, anxiety, depression, negative_er, positive_er)
+
+```
+
+
+Let's have a look at the relationship between `alexithymia` and `distress`. 
+
+```{r}
+ggplot(alex, aes(alexithymia, distress)) + geom_point()
+
+```
+
+Does this look like a linear regression would be adequate to describe this relationship? Why?
+
+> Enter your response here
+
+
+
+What about relationship between `alexithymia` and `negative_er` (i.e., overall difficulty to regulate negative emotions). 
+
+```{r}
+ggplot(alex, aes(alexithymia, negative_er)) + geom_point()
+
+```
+
+Does this look like a linear regression would be adequate to describe this relationship? Why
+
+> Enter your response here
+
+
+
+
+
+## In-build dataset
+
+R comes with a bunch of datasets that are ready to use (and useful for teaching and learning purposes). You can get the list of datasets using
+
+```{r}
+data()
+```
+
+
+
+
+Exercise: Have a look at the `women` dataset.
+
+```{r}
+help(women) # to read the documentation about this dataset
+```
+
+
+```{r}
+data(women) # to load the dataset of interest into your R session
+```
+
+
+
+Regress weight on height. 
+
+```{r}
+# TODO: run linear model and display results*
+
+```
+
+
+What can you tell?
+
+Can you interpret the results?
+
+If you know a woman weights 125 lbs, what can you say about her height?
+
+
+
+Exercise: have a look at the `attitude` dataset.
+
+```{r}
+help(attitude)
+```
+
+The documentation is not great. I found a better documentation [here](https://runebook.dev/en/docs/r/library/datasets/html/attitude); it says:
+
+
+The attitude dataset is a built-in dataset in R that's great for learning and practicing basic data manipulation and statistical analysis. It contains the results of a survey of 30 employees, measuring their attitude towards their work. The dataset has seven columns
+
+**rating**: Overall rating of the company's work climate
+
+**complaints**: Handling of employee complaints
+
+**privileges**: Employee privileges
+
+**learning**: Opportunity for learning
+
+**raises**:  Opportunity for raises
+
+**advance**: Opportunity for advancement
+
+**pleasantness**: Pleasantness of the work environment
+
+
+
+```{r}
+data(attitude)
+```
+
+
+Exercise: Using a simple linear regression, try to explain as best the variable `rating` using any of the other variables (use only one for now).
+
+
+```{r}
+# write your code here:
+
+```
+
+
+How good is your model?
+
+Can you interpret the results?
+
+
+
+
+
