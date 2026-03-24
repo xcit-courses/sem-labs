@@ -457,7 +457,8 @@ The dataset below comes from Brett et al. (2025), the same paper introduced in t
 Load the dataset with the code below:
 
 ```{r}
-alex <- read_csv("data/brett2025.csv")
+# alex <- read_csv("data/brett2025.csv")
+alex <- read_csv("https://raw.githubusercontent.com/xcit-courses/sem-labs/refs/heads/main/linear_regression/data/brett2025.csv")
 
 alex <- alex |>
   filter(session_index == 1) |>

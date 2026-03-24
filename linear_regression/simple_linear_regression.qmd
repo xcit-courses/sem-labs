@@ -23,6 +23,7 @@ It is useful to start with simulated data as in this case we know the theoretica
 
 
 ```{r}
+set.seed(42)
 n <- 100 # number of data points
 age <- runif(n, min = 18, max = 65)
 err <- rnorm(n, 0, 1000)
@@ -191,7 +192,9 @@ In the above example we used a real dataset. Now let's look at a real dataset fr
 # loading the data from Brett et al. 
 # https://osf.io/jwhna/files/mbhz8
 
-alex <- read_csv("data/brett2025.csv")
+alex <- read_csv("https://raw.githubusercontent.com/xcit-courses/sem-labs/refs/heads/main/linear_regression/data/brett2025.csv")
+
+
 
 alex <- alex |> 
   filter(session_index==1) |> 
