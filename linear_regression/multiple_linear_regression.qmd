@@ -1,0 +1,512 @@
+---
+title: "Multiple linear regression"
+format: html
+---
+
+
+
+## About
+
+This notebook covers multiple linear regression — the extension of simple linear regression to more than one predictor. We will focus on five key topics:
+
+1. **Correlated predictors** — predictors are often correlated with each other, which complicates the picture.
+2. **R² always increases** — adding any new variable, even a random one, inflates R². We therefore need *adjusted* R².
+3. **Interpreting coefficients** — in a multiple regression the meaning of each coefficient changes compared to simple regression.
+4. **Model comparison** — using `anova()` to formally test whether extra predictors improve the fit.
+5. **Predictions** — using `predict()` to generate predicted values for new observations.
+
+
+
+```{r}
+# load packages
+library(tidyverse)
+library(GGally)   # for ggpairs()
+```
+
+
+---
+
+## Simulated data
+
+We will reuse the simulated salary/age dataset from the previous lab. As a reminder, the true model is:
+
+$$\text{salary} = 2500 + (\text{age} - 18) \times 120 + \varepsilon$$
+
+```{r}
+set.seed(42)
+n <- 100
+age <- runif(n, min = 18, max = 65)
+err <- rnorm(n, 0, 1000)
+salary_true <- 2500 + (age - 18) * 120
+salary <- salary_true + err
+sim_data <- data.frame(age, salary_true, salary)
+```
+
+
+### Adding a correlated predictor
+
+In practice we rarely have access to just one predictor. Suppose we also measure **years of experience** for each person. Experience is likely correlated with age (older people tend to have more experience), so let's simulate it that way:
+
+```{r}
+sim_data$experience <- (age - 18) * 0.8 + rnorm(n, 0, 3)
+sim_data$experience <- pmax(sim_data$experience, 0)  # no negative experience
+```
+
+How correlated are `age` and `experience`?
+
+```{r}
+cor(sim_data$age, sim_data$experience)
+```
+
+> What do you expect will happen when we include both in the model? Write your prediction here:
+
+____
+
+
+We can visualise the pairwise relationships among all three variables at once:
+
+```{r}
+ggpairs(sim_data[, c("age", "experience", "salary")])
+```
+
+**Q: Which predictor looks more strongly correlated with salary? Does this match what you expected from the way we simulated the data?**
+
+> Enter your response here:
+
+____
+
+
+---
+
+### Fitting a multiple regression
+
+Let's now fit three models and compare them:
+
+- `m1` — salary predicted by age alone  
+- `m2` — salary predicted by experience alone  
+- `m3` — salary predicted by **both** age and experience
+
+```{r}
+m1 <- lm(salary ~ age,        data = sim_data)
+m2 <- lm(salary ~ experience, data = sim_data)
+m3 <- lm(salary ~ age + experience, data = sim_data)
+
+summary(m1)
+```
+
+```{r}
+summary(m2)
+```
+
+```{r}
+summary(m3)
+```
+
+**Q: Compare the coefficients for `age` in `m1` and `m3`. Are they the same? Why or why not?**
+
+> Enter your response here:
+
+____
+
+**Q: What happens to the standard errors of the coefficients when you include both predictors at once? Can you explain why?**
+
+> Enter your response here:
+
+____
+
+
+---
+
+### R² and adjusted R²
+
+Every time you add a predictor — even a completely useless one — R² can only stay the same or go up. Let's demonstrate this by adding a pure random variable:
+
+```{r}
+sim_data$pure_random <- rnorm(n, 0, 1)
+
+m4 <- lm(salary ~ age + pure_random, data = sim_data)
+summary(m4)
+```
+
+Compare the R² values from `m1` and `m4`:
+
+```{r}
+cat("m1  R²:", summary(m1)$r.squared, "\n")
+cat("m4  R²:", summary(m4)$r.squared, "\n")
+```
+
+**Q: Did R² increase, decrease, or stay the same after adding `pure_random`? Is this a meaningful improvement?**
+
+> Enter your response here:
+
+____
+
+Adjusted R² penalises each extra predictor unless it genuinely reduces the residual variance enough to compensate. Let's compare adjusted R²:
+
+```{r}
+cat("m1  Adjusted R²:", summary(m1)$adj.r.squared, "\n")
+cat("m4  Adjusted R²:", summary(m4)$adj.r.squared, "\n")
+```
+
+**Q: Which model does adjusted R² prefer? Is this the model you would have chosen on scientific grounds?**
+
+> Enter your response here:
+
+____
+
+The formula for adjusted R² is:
+
+$$\bar{R}^2 = 1 - \frac{(1 - R^2)(n - 1)}{n - p - 1}$$
+
+where $n$ is the sample size and $p$ is the number of predictors. Notice that adding a predictor that does not reduce the residual sum of squares enough will actually *decrease* $\bar{R}^2$.
+
+Let's verify this manually for `m1` and `m4`:
+
+```{r}
+n <- nrow(sim_data)
+
+# manual adjusted R² for m1 (1 predictor)
+r2_m1 <- summary(m1)$r.squared
+1 - (1 - r2_m1) * (n - 1) / (n - 1 - 1)
+
+# manual adjusted R² for m4 (2 predictors)
+r2_m4 <- summary(m4)$r.squared
+1 - (1 - r2_m4) * (n - 1) / (n - 2 - 1)
+```
+
+
+---
+
+### Interpreting model coefficients
+
+In a simple regression $y = \beta_0 + \beta_1 x + \varepsilon$, the slope $\beta_1$ has a straightforward meaning: a one-unit increase in $x$ is associated with a $\beta_1$ change in $y$.
+
+In a multiple regression $y = \beta_0 + \beta_1 x_1 + \beta_2 x_2 + \varepsilon$, the slope for $x_1$ is the expected change in $y$ for a one-unit increase in $x_1$ **holding $x_2$ constant**. This "holding constant" is the source of much confusion when predictors are correlated.
+
+Let's look at `m3` again:
+
+```{r}
+summary(m3)
+```
+
+**Q: The coefficient for `age` in `m3` is the effect of age on salary *after controlling for experience*. Given that we simulated salary to depend only on `age`, what does the coefficient on `experience` represent? Why is it different from zero?**
+
+> Enter your response here:
+
+____
+
+We can visualise the problem of correlated predictors geometrically. When two predictors are correlated, it is hard to disentangle their individual effects because we rarely observe one varying while the other is held constant:
+
+```{r}
+ggplot(sim_data, aes(age, experience)) +
+  geom_point(alpha = 0.5) +
+  geom_smooth(method = "lm", se = FALSE, color = "steelblue") +
+  labs(title = "Age and experience are correlated",
+       subtitle = "Separating their individual effects is inherently difficult")
+```
+
+
+---
+
+## Real dataset — attitude
+
+The `attitude` dataset (built into R) contains survey responses from 30 employees on seven variables:
+
+| Variable | Description |
+|---|---|
+| `rating` | Overall rating of the company's work climate |
+| `complaints` | Handling of employee complaints |
+| `privileges` | Employee privileges |
+| `learning` | Opportunity for learning |
+| `raises` | Opportunity for raises |
+| `advance` | Opportunity for advancement |
+| `critical` | How critical the supervisor is |
+
+```{r}
+data(attitude)
+help(attitude)
+```
+
+
+### Explore pairwise relationships
+
+```{r}
+ggpairs(attitude, progress = FALSE)
+```
+
+**Q: Which predictors seem most correlated with `rating`? Which predictors are correlated with each other?**
+
+> Enter your response here:
+
+____
+
+
+### Simple vs multiple regression
+
+First, fit a simple regression using the single strongest predictor you identified above:
+
+```{r}
+# TODO: replace 'complaints' with the predictor you chose
+# m_simple <- lm(rating ~ ??, data = attitude)
+# summary(m_simple)
+```
+
+Now add all remaining predictors:
+
+```{r}
+#
+# 
+```
+
+**Q: Compare R² and adjusted R² across the two models. Does the full model represent a genuine improvement?**
+
+> Enter your response here:
+
+____
+
+
+### Interpreting coefficients with correlated predictors
+
+Look at the coefficient for `complaints` in `m_simple` vs `m_full`.
+
+```{r}
+#cat("complaints coefficient in simple model:", coef(m_simple)["complaints"], "\n")
+#cat("complaints coefficient in full model:  ", coef(m_full)["complaints"], "\n")
+```
+
+**Q: Why do you think the coefficient changes when more predictors are added? Which estimate do you trust more for predicting a *new* observation (not explaining the effect of complaints alone)?**
+
+> Enter your response here:
+
+____
+
+
+### A note on multicollinearity
+
+When two predictors are highly correlated, their coefficients become unstable — a small change in the data can flip their signs or inflate their standard errors dramatically. This is called **multicollinearity**. One way to detect it is the *Variance Inflation Factor* (VIF):
+
+```{r}
+# install.packages("car") if needed
+library(car)
+vif(m_full)
+```
+
+A VIF > 5–10 is often taken as a warning sign. 
+
+**Q: Which predictor has the highest VIF? Does this match the correlation structure you observed in `ggpairs()`?**
+
+> Enter your response here:
+
+____
+
+
+---
+
+## Model comparison with `anova()`
+
+Adjusted R² gives a rough guide to whether an extra predictor is worth including, but it doesn't tell us whether the improvement is *statistically significant*. For nested models (where one model is a special case of the other) we can use an **F-test** via `anova()`.
+
+The test asks: *does the extra predictor reduce the residual sum of squares by more than we would expect by chance?*
+
+Let's compare `m_simple` (one predictor) and `m_full` (all predictors) on the `attitude` data:
+
+```{r}
+anova(m_simple, m_full)
+```
+
+The output shows:
+
+- **RSS** — residual sum of squares for each model; a smaller RSS means a better fit.
+- **F** — the F-statistic for the improvement.
+- **Pr(>F)** — the p-value. A small p-value means the extra predictors collectively improve the fit more than expected by chance.
+
+**Q: Is the improvement from `m_simple` to `m_full` statistically significant? What does that tell you?**
+
+> Enter your response here:
+
+____
+
+We can also compare models step by step. For the simulated data, let's test whether adding `experience` to the `age`-only model is justified:
+
+```{r}
+anova(m1, m3)
+```
+
+**Q: What do you conclude? Does `experience` add significant explanatory power over `age` alone? Does this match your expectation, given the way the data were simulated?**
+
+> Enter your response here:
+
+____
+
+> **Important**: `anova()` for model comparison only makes sense for **nested** models fitted on the **same dataset**. Model 1 must be a restricted version of model 2 (i.e., every predictor in model 1 also appears in model 2).
+
+
+---
+
+## Making predictions with `predict()`
+
+Once a model is fitted, `predict()` lets us apply it to new data. This is one of the most practical uses of a regression model.
+
+### Predicting from the simulated data
+
+`predict()` called without extra arguments returns the fitted values — the model's predictions for the observations it was trained on:
+
+```{r}
+fitted_values <- predict(m1)
+head(fitted_values)
+```
+
+These are exactly the same as `m1$fitted.values`. We can overlay them on the original data:
+
+```{r}
+sim_data$fitted_m1 <- predict(m1)
+
+ggplot(sim_data, aes(age, salary)) +
+  geom_point(alpha = 0.5) +
+  geom_line(aes(y = fitted_m1), color = "steelblue", linewidth = 1) +
+  labs(title = "Observed salary vs model predictions (m1)")
+```
+
+### Predicting for new observations
+
+To predict for observations not in the training data, pass a data frame to the `newdata` argument. The column names must match the predictor names in the model exactly.
+
+```{r}
+new_people <- data.frame(age = c(25, 35, 45, 55))
+predict(m1, newdata = new_people)
+```
+
+**Q: Do these predicted values make sense given the model coefficients you saw in `summary(m1)`? Verify one of them by hand.**
+
+> Enter your response here:
+
+____
+
+We can also request **confidence intervals** (uncertainty about the mean prediction) or **prediction intervals** (uncertainty about a single new observation):
+
+```{r}
+# 95% confidence interval for the mean response
+predict(m1, newdata = new_people, interval = "confidence")
+
+# 95% prediction interval for a new individual
+predict(m1, newdata = new_people, interval = "prediction")
+```
+
+**Q: Which interval is wider — confidence or prediction? Why does that make sense intuitively?**
+
+> Enter your response here:
+
+____
+
+
+### Predicting from the multiple regression model
+
+Now do the same with `m3` (age + experience). The `newdata` data frame must now include **both** predictors:
+
+```{r}
+new_people2 <- data.frame(
+  age        = c(25, 35, 45, 55),
+  experience = c(4,  12, 20, 30)
+)
+
+predict(m3, newdata = new_people2, interval = "confidence")
+```
+
+**Q: How do the predictions from `m3` compare to those from `m1` for roughly the same ages? Are the differences large?**
+
+> Enter your response here:
+
+____
+
+> **Tip**: If you supply a `newdata` frame that is missing a predictor that appears in the model, R will throw an error. Always ensure your new data frame has all the predictors the model needs.
+
+
+---
+
+## Summary
+
+| Concept | Key take-away |
+|---|---|
+| Correlated predictors | Hard to separate their effects; coefficients represent *partial* effects |
+| R² always increases | Never compare models of different sizes using R² alone |
+| Adjusted R² | Penalises extra predictors; use it to compare models |
+| Coefficient interpretation | Each coefficient is a *ceteris paribus* (all-else-equal) effect |
+| Multicollinearity | Inflates standard errors and makes coefficients unstable |
+| `anova(m1, m2)` | F-test for nested models; tests whether extra predictors improve fit significantly |
+| `predict()` | Apply a fitted model to new data; use `interval =` for uncertainty quantification |
+
+
+---
+
+## Exercise: predicting distress from alexithymia and emotion regulation
+
+The dataset below comes from Brett et al. (2025), the same paper introduced in the simple linear regression lab. It contains psychological measures for a sample of participants. The variables are:
+
+| Variable | Description |
+|---|---|
+| `alexithymia` | Difficulty identifying and describing emotions (higher = more alexithymia) |
+| `distress` | Overall psychological distress (DASS total score) |
+| `stress` | Stress sub-scale of the DASS |
+| `anxiety` | Anxiety sub-scale of the DASS |
+| `depression` | Depression sub-scale of the DASS |
+| `negative_er` | Overall difficulty regulating negative emotions |
+| `positive_er` | Overall positive emotion regulation |
+| `age` | Age in years |
+| `sex` | Biological sex |
+
+Load the dataset with the code below:
+
+```{r}
+alex <- read_csv("data/brett2025.csv")
+
+alex <- alex |>
+  filter(session_index == 1) |>
+  rename(
+    person_id   = agent_id,
+    alexithymia = PAQ_tot,
+    distress    = DASS_tot,
+    stress      = DASS_stress,
+    anxiety     = DASS_anxiety,
+    depression  = DASS_depression,
+    negative_er = PERCI_Negative_ER,
+    positive_er = PERCI_tot
+  ) |>
+  select(person_id, age, sex, alexithymia, distress, stress,
+         anxiety, depression, negative_er, positive_er)
+```
+
+Your goal is to build the best possible multiple linear regression model to predict **`distress`** using the other variables as predictors.
+
+Work through the following steps:
+
+**Step 1 — Explore the data**
+
+Produce a pairwise plot of all numeric variables. Note which predictors are correlated with `distress` and which are correlated with each other.
+
+**Step 2 — Fit candidate models**
+
+Fit at least three models of increasing complexity. Start with a single strong predictor, then add further predictors one at a time. Keep track of each model object with a meaningful name (e.g., `mod1`, `mod2`, `mod3`).
+
+**Step 3 — Compare models**
+
+Use adjusted R² and `anova()` to compare your candidate models. Which predictors genuinely improve the fit? Are any of the improvements non-significant?
+
+**Step 4 — Check for multicollinearity**
+
+Compute the VIF for your final model. Are any predictors so highly correlated that their separate effects cannot be reliably estimated? If so, consider dropping one.
+
+**Step 5 — Interpret the coefficients**
+
+Write a one-paragraph interpretation of your chosen model. For each predictor you kept, explain:
+- the direction and magnitude of the effect,
+- what it means *holding all other predictors constant*,
+- whether the effect is statistically significant.
+
+**Step 6 — Predict for new cases**
+
+Use `predict()` to estimate the distress score (with a 95% prediction interval) for two hypothetical individuals of your choice. Report the values and comment on how wide the intervals are.
+
+> Enter your responses, interpretations, and any plots/tables here:
+
+____
+

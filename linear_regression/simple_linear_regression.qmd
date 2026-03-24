@@ -43,7 +43,6 @@ p1 <- ggplot(sim_data, aes(age, salary)) +
   coord_cartesian(xlim = c(0, 100))
 p1
 ```
-(Intercept)  481.965; age          113.933 
 
 
 

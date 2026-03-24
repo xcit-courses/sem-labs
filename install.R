@@ -8,4 +8,4 @@ install.packages("broom")
 install.packages("lavaan", dependencies = TRUE)
 install.packages("semPlot", dependencies = TRUE)
 install.packages("devtools")
-
+install.packates("GGally", dependencies = TRUE)
