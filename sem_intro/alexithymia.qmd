@@ -1,0 +1,109 @@
+---
+title: "Alexithymia (Brett et al., 2025)"
+format: html
+---
+
+## About
+
+The goal of this notebook is to review some of the concepts we have covered in this class using a real dataset.
+
+The data in this notebook comes from the following paper: <https://link.springer.com/article/10.1007/s42761-025-00318-9>
+
+The authors also publicly shared the dataset and code; you can access those resources here: <https://osf.io/jwhna/overview>
+
+This is valuable for several reasons: it allows other researchers to reproduce the results (a best practice that increases trust in science), it offers learning opportunities (e.g., seeing how experienced researchers process and analyze their data), and it opens the door for original research (e.g., we can analyze and interpret the data differently and potentially provide new insights).
+
+## Getting started
+
+```{r}
+library(tidyverse)
+library(lavaan)
+```
+
+I've shared a (slightly modified) version of this dataset in the `data` folder.
+
+You can load data like this:
+
+```{r}
+# load data
+alex <- read_csv("data/brett2025.csv")
+alex
+```
+
+Open the pdf of the paper and have a look at this dataset.
+
+Can you make sense of the dataset?
+
+## Multiple linear regression
+
+Using multiple linear regression, build a model to best explain psychological distress at the second time point (`distress_t2`).
+
+```{r}
+# Write your code here
+
+```
+
+
+
+
+## Mediation analysis
+
+Have a look at Figure 1 in Brett et al. (2025). The authors present a model where the outcome of interest is $\Delta$Distress, which has a direct effect of $\Delta$NER, $\Delta$PER, and `Alexithymia at T1`, as well as an indirect effect from `Alexithymia at T1` via $\Delta$NER and $\Delta$PER.
+
+[![(text from paper): The parallel mediation model of alexithymia at T1 predicting change in psychological distress over time, mediated by change in valence-specific emotion regulation. Note: N-ER = Negatively valenced emotion regulation, higher scores indicate worse regulation; P-ER = Positively valenced emotion regulation, higher scores indicate worse regulation. Solid lines indicate significant effects (green = positive), and dotted lines indicate non-significant effects. \*p \< .05, \*\*p \< .001, \*\*\*p \< .001](images/brett2025_fig1.webp)](https://link.springer.com/article/10.1007/s42761-025-00318-9/figures/1)
+
+
+
+
+
+
+The R script shared by Brett et al. (2025) is available online <https://osf.io/jwhna/files/pxf6g> ; for convenience, I've downloaded it here too: it is called `Alexithymia adolescents_analyses.R`
+
+
+
+We will not try to reproduce their results exactly. Instead, try to implement a simplified version of this mediation model using a series of linear regressions:
+
+- delta_n_er as a function of alexithymia at t1
+- delta_p_er as a function of alexithymia at t1
+- is there a partial correlation between delta_n_er and delta_p_er after controlling for alexithymia at t1?
+- is there an effect of alexithymia at t1 on delta_distress after controlling for delta_n_er and delta_p_er?
+
+
+```{r}
+# Write your code here:
+
+```
+
+
+
+
+
+While the above approach gives correct point estimates, it does not provide standard errors or confidence intervals for the indirect effects (because $a \times b$ is a product of two random variables and is not normally distributed). The standard solution is to use **bootstrapping**, which is straightforward in `lavaan`:
+
+```{r}
+library(lavaan)
+
+mediation_model <- "
+  # a paths
+  delta_n_er    ~ a1 * alexithymia_t1
+  delta_p_er    ~ a2 * alexithymia_t1
+
+  # b paths + direct effect
+  delta_distress ~ b1 * delta_n_er + b2 * delta_p_er + c_prime * alexithymia_t1
+
+  # indirect and total effects
+  indirect_ner  := a1 * b1
+  indirect_per  := a2 * b2
+  total_indirect := indirect_ner + indirect_per
+  total          := c_prime + total_indirect
+"
+
+set.seed(123)
+fit <- sem(mediation_model, data = alex, se = "bootstrap", bootstrap = 1000)
+
+parameterEstimates(fit, boot.ci.type = "bca.simple") |>
+  dplyr::filter(label != "") |>
+  dplyr::select(label, est, se, ci.lower, ci.upper, pvalue)
+```
+
+There are various reasons why we don't get the exact same results as in the paper; this code is meant only for illustration, not as a real analysis.
