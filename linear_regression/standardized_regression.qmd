@@ -1,0 +1,415 @@
+---
+title: "Standardized Regression Coefficients"
+format: html
+---
+
+
+
+## About
+
+This notebook covers **standardized regression coefficients** — what they are, how to compute them, and why they matter.
+
+We will focus on three key topics:
+
+1. **Standardising variables** — z-scoring predictors and outcomes before fitting a linear model.
+2. **Standardized vs unstandardized coefficients** — how the two relate, when they differ, and which one to report.
+3. **Simple regression special case** — showing that the standardized coefficient equals the Pearson correlation $r$ when there is only one predictor.
+
+```{r}
+library(tidyverse)
+library(GGally)
+```
+
+
+---
+
+## Data
+
+We reuse the simulated salary/age dataset from the previous labs. The true model is:
+
+$$\text{salary} = 2500 + (\text{age} - 18) \times 120 + \varepsilon$$
+
+We also include **years of experience**, which is correlated with age.
+
+```{r}
+set.seed(42)
+n <- 100
+
+age        <- runif(n, min = 18, max = 65)
+err        <- rnorm(n, 0, 1000)
+salary     <- 2500 + (age - 18) * 120 + err
+experience <- pmax((age - 18) * 0.8 + rnorm(n, 0, 3), 0)
+
+sim_data <- data.frame(age, experience, salary)
+head(sim_data)
+```
+
+
+---
+
+## Part 1 — What are standardized coefficients?
+
+### The problem with raw (unstandardized) coefficients
+
+In a regression model, each coefficient is expressed in the **original units** of that variable. For instance, in our model:
+
+$$\widehat{\text{salary}} = \beta_0 + \beta_1 \cdot \text{age} + \beta_2 \cdot \text{experience}$$
+
+- $\beta_1$ is in dollars-per-year-of-age
+- $\beta_2$ is in dollars-per-year-of-experience
+
+These are on different scales. If we were comparing age (measured in years, range ≈ 18–65) against some variable measured in, say, months or dollars, a direct comparison of $\beta_1$ vs $\beta_2$ would be meaningless.
+
+**Standardized coefficients** solve this by putting everything in units of standard deviations: a standardized coefficient $\beta^*$ tells you *how many standard deviations $y$ changes for a one-SD increase in $x$*. This makes coefficients comparable across predictors and across studies.
+
+
+### Step 1 — Standardise the variables (z-score)
+
+Z-scoring a variable $x$ means: subtract its mean and divide by its standard deviation.
+
+$$z_x = \frac{x - \bar{x}}{s_x}$$
+
+After z-scoring, every variable has mean 0 and SD 1. 
+
+
+You can z-score a variable as follows
+
+```{r}
+
+age_z <- ( sim_data$age - mean(sim_data$age) ) / sd(sim_data$age)
+
+cat("Mean of standardized `age`: ",  round(mean(age_z), 4) )
+cat("\n")
+cat("SD of standardized `age`: ",  round(sd(age_z), 4) )
+
+```
+
+
+Instead of doing this manually and separately for each variable, we can use `scale()` for z-scoring and use the tidyverse tools to apply this to all variables at once:
+
+```{r}
+sim_data_z <- sim_data |>
+  mutate(across(everything(), ~ as.numeric(scale(.))))
+
+# Verify: means should be ~0, SDs should be ~1
+sim_data_z |>
+  summarise(across(everything(), list(mean = mean, sd = sd))) |>
+  pivot_longer(everything(), names_to = c("variable", "stat"), names_sep = "_(?=[^_]+$)") |>
+  pivot_wider(names_from = stat, values_from = value)
+```
+
+
+---
+
+## Part 2 — Simple regression: standardized coefficient = correlation
+
+Let's start with the simplest case: **one predictor**.
+
+We can fit the same model on either the raw data or on the standardized data:
+
+```{r}
+# --- Unstandardized simple regression ---
+m_raw <- lm(salary ~ age, data = sim_data)
+
+# --- Standardized simple regression (z-scored data) ---
+m_std <- lm(salary ~ age, data = sim_data_z)
+
+```
+
+
+
+```{r}
+summary(m_raw)
+```
+
+
+
+```{r}
+summary(m_std)
+```
+
+
+When comparing the results of these two model fits, you can see that 
+
+  a) the estimated coefficients are different
+  b) the overall model statistics (i.e., R-squared, F, p-value) are identical
+
+
+
+Does this make sense to you?
+
+
+
+
+
+By transforming the variables we can facilitate the interpretation of the coefficient or give them properties we believe are useful.
+
+
+In a simple linear regression of $y$ on $x$, the standardized slope equals the Pearson correlation between $x$ and $y$:
+
+$$\beta^*_{yx} = r_{xy}$$
+
+This is a key insight. Let's verify it with our data.
+
+
+```{r}
+# Pearson correlation between age and salary
+r_age_salary <- cor(sim_data$age, sim_data$salary)
+
+# Standardized slope from the z-scored model
+beta_std <- coef(m_std)["age"]
+
+cat("Pearson r(age, salary)         =", round(r_age_salary, 6), "\n")
+cat("Standardized beta (age->salary) =", round(beta_std,     6), "\n")
+cat("Are they equal?", isTRUE(all.equal(r_age_salary, beta_std, tolerance = 1e-10)), "\n")
+```
+
+
+### Why does this equivalence hold?
+
+The formula for the OLS slope in a simple regression is:
+
+$$\hat{\beta}_1 = \frac{\text{Cov}(x, y)}{\text{Var}(x)}$$
+
+When both $x$ and $y$ are standardized (SD = 1), $\text{Var}(x) = 1$ and $\text{Cov}(x, y) = r_{xy}$, so:
+
+$$\hat{\beta}^*_1 = \frac{r_{xy}}{1} = r_{xy}$$
+
+This equivalence breaks down as soon as you add a second predictor (multiple regression), because the slope for each predictor is then adjusted for the others. In that case $\beta^* \neq r_{xy}$ in general — which is precisely what makes multiple regression more informative than a set of pairwise correlations.
+
+**Q: If the standardized coefficient equals $r$ in simple regression, what does the intercept equal after standardising? Check this from the output above.**
+
+> Write your answer here:
+
+____
+
+
+---
+
+## Part 3 — Converting between standardized and unstandardized coefficients
+
+You don't always need to re-run a model on z-scored data. Given the unstandardized slope $\hat{\beta}_1$ and the standard deviations of $x$ and $y$, you can convert:
+
+$$\beta^*_1 = \hat{\beta}_1 \cdot \frac{s_x}{s_y}$$
+
+And the reverse:
+
+$$\hat{\beta}_1 = \beta^*_1 \cdot \frac{s_y}{s_x}$$
+
+Let's verify this manually:
+
+```{r}
+beta_raw <- coef(m_raw)["age"]   # unstandardized slope
+s_x      <- sd(sim_data$age)
+s_y      <- sd(sim_data$salary)
+
+# Convert raw -> standardized
+beta_std_manual <- beta_raw * (s_x / s_y)
+
+cat("Standardized beta (z-scored model)    =", round(coef(m_std)["age"],  6), "\n")
+cat("Standardized beta (manual conversion) =", round(beta_std_manual,      6), "\n")
+```
+
+
+---
+
+## Part 4 — Multiple regression: standardized vs unstandardized
+
+### Fitting and comparing the models
+
+Now let's fit the full multiple regression with both `age` and `experience`, in both raw and standardized form.
+
+```{r}
+# Unstandardized multiple regression
+m_multi_raw <- lm(salary ~ age + experience, data = sim_data)
+
+# Standardized multiple regression
+m_multi_std <- lm(salary ~ age + experience, data = sim_data_z)
+
+cat("=== Unstandardized ===\n")
+summary(m_multi_raw)$coefficients
+
+cat("\n=== Standardized ===\n")
+summary(m_multi_std)$coefficients
+```
+
+### Reading the standardized output
+
+In the standardized model:
+
+- The **intercept is 0** (both $x$ and $y$ are centred at 0 after z-scoring).
+- Each slope tells you: *a 1-SD increase in this predictor is associated with a $\beta^*$-SD change in salary, holding the other predictor constant.*
+- You can now **directly compare** the coefficients: whichever has the larger absolute value has the stronger unique association with salary.
+- BUT: these coefficients depend on the variance of the variables (e.g., the range of ages you included in your data)
+
+
+
+**Q: Which predictor has a larger standardized coefficient — `age` or `experience`? Is this surprising given that salary was simulated to depend only on `age`? Why might `experience` still have a nonzero coefficient?**
+
+> Write your answer here:
+
+____
+
+
+### Standardized coefficients do NOT equal correlations in multiple regression
+
+In simple regression we showed $\beta^* = r$. In multiple regression this no longer holds — the coefficients are adjusted for the other predictors. Let's confirm:
+
+```{r}
+r_age_sal  <- cor(sim_data$age,        sim_data$salary)
+r_exp_sal  <- cor(sim_data$experience, sim_data$salary)
+beta_age   <- coef(m_multi_std)["age"]
+beta_exp   <- coef(m_multi_std)["experience"]
+
+comparison <- tibble(
+  predictor        = c("age", "experience"),
+  `zero-order r`   = c(r_age_sal, r_exp_sal),
+  `standardized b` = c(beta_age,  beta_exp),
+  difference       = c(r_age_sal - beta_age, r_exp_sal - beta_exp)
+)
+
+print(comparison)
+```
+
+The difference between $r$ and $\beta^*$ reflects the adjustment for the shared variance between `age` and `experience`. Because the two predictors are correlated, including both changes each coefficient relative to the zero-order correlation.
+
+
+---
+
+## Part 5 — Visual comparison
+
+### Coefficient plot: raw vs standardized
+
+A useful way to communicate regression results is a **coefficient plot** — one dot per predictor, with its confidence interval. In the standardized version all predictors are on the same scale, making comparisons fair.
+
+```{r}
+coef_plot_data <- function(model, label) {
+  ci    <- confint(model)
+  coefs <- coef(model)
+  tibble(
+    model     = label,
+    predictor = names(coefs),
+    estimate  = unname(coefs),
+    lower     = unname(ci[, 1]),
+    upper     = unname(ci[, 2])
+  ) |> filter(predictor != "(Intercept)")
+}
+
+plot_dat <- bind_rows(
+  coef_plot_data(m_multi_raw, "Unstandardized"),
+  coef_plot_data(m_multi_std, "Standardized")
+)
+
+ggplot(plot_dat, aes(x = estimate, y = predictor, xmin = lower, xmax = upper)) +
+  geom_pointrange(size = 0.8) +
+  geom_vline(xintercept = 0, linetype = "dashed", colour = "grey50") +
+  facet_wrap(~ model, scales = "free_x") +
+  labs(
+    title = "Regression coefficients: unstandardized vs standardized",
+    x     = "Coefficient estimate (± 95% CI)",
+    y     = NULL
+  ) +
+  theme_minimal()
+```
+
+**Q: In the unstandardized panel the coefficients for `age` and `experience` look very different in magnitude. In the standardized panel they look much closer. What does this tell you about the importance of scale when comparing predictors?**
+
+> Write your answer here:
+
+____
+
+
+---
+
+## Part 6 — Model fit is identical regardless of standardisation
+
+Standardising the variables does **not** change the model fit: R², adjusted R², and the F-statistic are all the same. Let's confirm:
+
+```{r}
+fit_comparison <- tibble(
+  model       = c("Unstandardized", "Standardized"),
+  R2          = c(summary(m_multi_raw)$r.squared,
+                  summary(m_multi_std)$r.squared),
+  adj_R2      = c(summary(m_multi_raw)$adj.r.squared,
+                  summary(m_multi_std)$adj.r.squared),
+  F_statistic = c(summary(m_multi_raw)$fstatistic["value"],
+                  summary(m_multi_std)$fstatistic["value"])
+)
+
+print(fit_comparison)
+```
+
+R² and the F-statistic are identical — standardisation is a linear rescaling, so it leaves the geometry of the regression unchanged. Only the *units* of the coefficients change, not what the model explains.
+
+
+---
+
+## Summary
+
+| Property | Unstandardized $\hat{\beta}$ | Standardized $\beta^*$ |
+|---|---|---|
+| Units | Original units of $y$ per unit of $x$ | SDs of $y$ per SD of $x$ |
+| Intercept | Mean of $y$ when all $x = 0$ | Always 0 |
+| Comparable across predictors? | No | Yes |
+| Simple regression: equals $r_{xy}$? | No | **Yes** |
+| Multiple regression: equals $r_{xy}$? | No | No (adjusted for other predictors) |
+| Changes model fit (R², F)? | — | No |
+
+The key takeaway: **standardized coefficients tell you about relative importance within a model; they do not change what the model predicts or how well it fits**.
+
+
+
+## Exercise
+
+The `attitude` dataset (built into R) contains survey responses from 30 employees on seven variables:
+
+| Variable | Description |
+|---|---|
+| `rating` | Overall rating of the company's work climate |
+| `complaints` | Handling of employee complaints |
+| `privileges` | Employee privileges |
+| `learning` | Opportunity for learning |
+| `raises` | Opportunity for raises |
+| `advance` | Opportunity for advancement |
+| `critical` | How critical the supervisor is |
+
+
+```{r}
+ggpairs(attitude, progress = FALSE)
+```
+
+
+
+Compute a linear regression of rating as a function of raises using a) the raw data and b) the standardized (z-scored) data.
+
+```{r}
+# linear model on the raw data
+# write your code here:
+
+```
+
+```{r}
+# linear model on the z-scored data
+# write your code here:
+
+```
+
+
+Compare and interpret the coefficients of the two models. Which one is the best?
+
+> Write your answer here:
+
+
+Which coefficient is equivalent to the linear correlation between `rating` and `raises`? 
+
+> Write your answer here:
+
+
+Write code to test that this is indeed correct.
+
+
+```{r}
+# write your coce here:
+
+```
+
